@@ -1,0 +1,246 @@
+import pandas as pd
+
+df=pd.read_csv("c:\\data\\bank_train.csv")
+
+# df.head()
+# df.info()
+# df.isna().sum() #결측치 없음
+# len(df)
+
+# df.duplicated().sum()
+
+df.loc[:,['연간 소득','최대 신용한도','현재 대출 잔액','현재 미상환 신용액','월 상환 부채액']]=df.loc[:,['연간 소득','최대 신용한도','현재 대출 잔액','현재 미상환 신용액','월 상환 부채액']]/1_000_000
+
+numerical_df=list(df.select_dtypes(include=['int','float']).columns)
+# print('numerical',len(numerical_df),numerical_df)
+# 숫자형 컬럼 13개
+
+
+categorial_df=list(df.select_dtypes(include=['object']).columns)
+# print('categorial',len(categorial_df),categorial_df)
+#범주형 컬럼 5개
+
+target_df= '채무 불이행 여부'
+df[target_df].value_counts() #0: 6588 (이행), 1:3412 (불이행)
+
+# for column in df.columns:
+#     print(column, len(df[column].unique()))
+
+
+# #불필요한 데이터 삭제
+if '채무 불이행 여부' in numerical_df:
+    numerical_df.remove('채무 불이행 여부')
+
+numerical_df
+
+if 'UID' in categorial_df:
+    categorial_df.remove('UID')
+
+categorial_df
+
+###############################################
+import seaborn as sns
+import matplotlib.pyplot as plt
+plt.rc('font', family='Malgun Gothic')  
+plt.rcParams['axes.unicode_minus'] = False
+
+# sns.countplot(x=target_df,data=df )
+
+# fig,axes = plt.subplots(4,2,figsize=(30,30))
+
+# categorial_df_repeat2=[]
+
+# for column in categorial_df:
+#     categorial_df_repeat2.append(column)
+#     categorial_df_repeat2.append(column)
+
+# for index,value in enumerate(zip(categorial_df_repeat2, axes.ravel())):
+#     column,ax= value
+
+#     if index %2 ==0:
+#         sns.countplot(data=df.sort_values(by=column),
+#                         x=column,
+#                         ax=ax,
+#                         hue=target_df)
+#         ax.set_title(f"{column} 전체 숫자 분포")
+
+#     elif index %2==1:
+#         pd.crosstab(df[column],df[target_df],normalize='index').plot(kind='bar',ax=ax)
+#         ax.set_title(f"{column} 그룹별 비율 분포")
+
+
+# fig, axes= plt.subplots(12,2,figsize=(10,50))
+
+# numerical_df_repeat2=[]
+
+# for column in numerical_df:
+#     numerical_df_repeat2.append(column)
+#     numerical_df_repeat2.append(column)
+
+# for index, value in enumerate(zip(numerical_df_repeat2,axes.ravel())):
+#     column, ax=value
+
+#     if index%2==0:
+#         sns.histplot(data=df,
+#                      x=column,
+#                      ax=ax,
+#                      hue=target_df)
+#         ax.set_title(f"{column} 전체 숫자 분포")
+
+#         plt.subplots_adjust(hspace=0.6)
+
+#     elif index%2==1:
+#         sns.boxplot(data=df[column],ax=ax)
+#         sns.stripplot(data=df[column],color='red',jitter=False, ax=ax)
+#         ax.set_title(f"{column} 이상치 여부")
+
+df[['연간 소득','최대 신용한도','현재 대출 잔액','현재 미상환 신용액','월 상환 부채액']].describe()
+
+import scipy.stats as stats
+        
+# plt.figure(figsize=(15,15))
+# x=1
+# plt.subplots_adjust(top=0.99,bottom=0.01, hspace=0.4, wspace=0.2)
+# for column in numerical_df:
+#     plt.subplot(4,3,x)
+#     x=x+1
+
+#     stats.probplot(df[column],dist=stats.norm, plot=plt)
+#     plt.title(column)
+
+# df_corr=df[numerical_df].corr(method='spearman')
+# plt.figure(figsize=(8,8))
+# sns.heatmap(df_corr, annot=True)
+
+# from statsmodels.stats.outliers_influence import variance_inflation_factor
+# x=df.select_dtypes(include=['number'])
+# vif_data= pd.DataFrame()
+# vif_data['Feature']=x.columns
+# vif_data['VIF']=[variance_inflation_factor(x.values,i)for i in range (x.shape[1])]
+
+# vif_data
+
+from sklearn.ensemble import RandomForestClassifier
+
+rf_model=RandomForestClassifier(n_estimators=100, random_state=42)
+
+# df.info()
+
+x2=df[numerical_df] #독립변수
+y2=df['채무 불이행 여부'] #종속변수
+
+rf_model.fit(x2,y2)
+
+importance_data=pd.DataFrame({'Feature':x2.columns, 'Important': rf_model.feature_importances_})
+importance_data= importance_data.sort_values(by='Important', ascending=False)
+
+# plt.figure(figsize=(8,6))
+# sns.barplot(x='Important', y='Feature', data=importance_data, color='dodgerblue')
+
+df['연간소득_대출잔액']=df['연간 소득'].values/df['현재 대출 잔액'].values
+df['연간소득_대출잔액']
+
+df['연간소득_구간']=pd.cut(df['연간 소득'],bins=[0,1.3,5.0,float("inf")],
+                     labels=["1","2","3"])
+
+
+df['대출잔액_구간']=pd.cut(df['현재 대출 잔액'],bins=[0,0.6,float("inf")],
+                     labels=["0","1"])
+
+import numpy as np
+
+df['연체직후여부']=np.where(df['마지막 연체 이후 경과 개월 수']<=1,1,0)
+
+x3=df.loc[:,['연간소득_대출잔액','연간소득_구간','대출잔액_구간','연체직후여부']] #독립변수
+y3=df['채무 불이행 여부'] #종속변수
+
+rf_model.fit(x3,y3)
+
+importance_data2=pd.DataFrame({'Feature':x3.columns, 'Important': rf_model.feature_importances_})
+importance_data2= importance_data2.sort_values(by='Important', ascending=False)
+
+# plt.figure(figsize=(8,6))
+# sns.barplot(x='Important', y='Feature', data=importance_data2, color='dodgerblue')
+
+df['연간소득_대출잔액']
+numerical_df2=pd.concat([df[numerical_df],df['연간소득_대출잔액']],axis=1)
+numerical_df2
+
+from sklearn.preprocessing import MinMaxScaler
+scaler=MinMaxScaler()
+numerical_df2_scaled= scaler.fit_transform(numerical_df2)
+
+df[categorial_df].head()
+categorial_df_encoding= pd.get_dummies(df['주거 형태'],prefix='주거').astype(int)
+categorial_df_encoding1=pd.get_dummies(df['대출 목적'],prefix='목적' ).astype(int)
+categorial_df_encoding2=pd.get_dummies(df['대출 상환 기간'],prefix='기간' ).astype(int)
+categorial_df_encoding3=pd.get_dummies(df['현재 직장 근속 연수'].str.slice(start=0, stop=-4),prefix='근속').astype(int)
+
+final_data=pd.concat([numerical_df2,categorial_df_encoding,categorial_df_encoding1,categorial_df_encoding2,categorial_df_encoding3],axis=1)
+
+# final_data.info()
+
+a=df['채무 불이행 여부'] #종속속변수
+b=final_data #독립변수
+
+from sklearn.model_selection import train_test_split
+x_train,x_test,y_train,y_test=train_test_split(b,a,test_size=0.1,random_state=42)
+
+from imblearn.over_sampling import SMOTE
+smote=SMOTE()
+
+x_train_smote, y_train_smote = smote.fit_resample(x_train,y_train)
+
+y_train_smote.value_counts()
+
+from sklearn.svm import SVC
+from sklearn.model_selection import GridSearchCV
+# svm_model=SVC(random_state=42)
+
+# param_grid={ 
+#                 'C' : [ 0.1, 1, 10, 100 ],
+#                'gamma' : ['scale', 'auto', 0.1, 0.01],  
+#                'kernel' : ['linear', 'rbf','sigmoid','poly']    
+#                   } 
+
+# grid_search=GridSearchCV(svm_model, 
+#                          param_grid,
+#                          cv=5,
+#                          scoring='accuracy')
+
+# grid_search.fit(x_train_smote,y_train_smote)
+
+# print('최적의 파라미터:', grid_search.best_params_)
+
+import xgboost as xgb
+xgb_model=xgb.XGBClassifier()
+
+param_grid = { 
+              'n_estimators' : [ 100, 200],  # 앙상블 모델의 트리의 갯수 
+              'max_depth' : [ 3, 5, 7 ], # 각 트리의 최대 깊이 
+              'learning_rate' : [ 0.01, 0.1 ], # 학습률 
+              'min_child_weight' : [ 1, 3, 5 ], # 리프 노드의 최소 가중치 합 
+                                                     # 이 값이 크면 과적합이 방지됨 
+} 
+
+grid_search = GridSearchCV( estimator= xgb_model,
+                           param_grid =param_grid,
+                           cv = 5, 
+                           scoring='accuracy', # f1-score, roc_auc, precision 
+                           n_jobs=-1 ) 
+
+grid_search.fit(x_train_smote,y_train_smote)
+
+# print('최적의 파라미터:',grid_search.best_params_)
+
+best_model=grid_search.best_estimator_
+best_model.fit(x_train_smote, y_train_smote)
+
+result=best_model.predict(x_test)
+
+accuracy = sum(result == y_test) / len(y_test)
+print(f"모델 정확도: {accuracy:.4f}")
+
+x_train_smote.info()
+
+x_train_smote.shape
