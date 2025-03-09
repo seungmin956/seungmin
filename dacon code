@@ -244,3 +244,71 @@ print(f"모델 정확도: {accuracy:.4f}")
 x_train_smote.info()
 
 x_train_smote.shape
+
+-----------------------------------
+# inertia=[]
+# K_range=range(1,11)
+
+# for i in K_range:
+#     kmeans=KMeans(n_clusters=i, random_state=42, n_init=10)
+#     kmeans.fit(numerical_df_scaled)
+#     inertia.append(kmeans.inertia_)
+
+# plt.plot(K_range, inertia, marker='o', linestyle='-')
+# plt.xlabel('Number of clusters (k)')
+# plt.ylabel('Inertia')
+# plt.title('Elbow Method for Optimal k')
+# plt.show()
+
+# from sklearn.metrics import silhouette_score
+
+# silhouette_scores = []
+
+# for k in range(2, 11):  
+#     kmeans = KMeans(n_clusters=k, random_state=42, n_init=10)
+#     cluster_labels = kmeans.fit_predict(numerical_df_scaled)
+#     score = silhouette_score(numerical_df_scaled, cluster_labels)
+#     silhouette_scores.append(score)
+
+# plt.plot(range(2, 11), silhouette_scores, marker='o', linestyle='-')
+# plt.xlabel('Number of clusters (k)')
+# plt.ylabel('Silhouette Score')
+# plt.title('Silhouette Score for Optimal k')
+# plt.show()
+
+# from sklearn.decomposition import PCA
+# import matplotlib.pyplot as plt
+
+# pca = PCA(n_components=2)  # 2D 시각화를 위해 차원 축소
+# X_pca = pca.fit_transform(numerical_df_scaled)
+
+# plt.scatter(X_pca[:, 0], X_pca[:, 1], alpha=0.5)
+# plt.xlabel("PCA Component 1")
+# plt.ylabel("PCA Component 2")
+# plt.title("PCA Visualization of Data")
+# plt.show()
+from sklearn.ensemble import RandomForestClassifier
+model = RandomForestClassifier()
+x_train=df[numerical_df] #독립변수
+y_train=df['채무 불이행 여부'] #종속변수
+model.fit(x_train, y_train)
+
+# feature_importance = pd.Series(model.feature_importances_, index=x_train.columns)
+# feature_importance.nlargest(10).plot(kind='barh')
+# plt.show()
+
+import seaborn as sns
+from sklearn.preprocessing import OneHotEncoder
+
+if '신용 문제 발생 횟수' in numerical_df:
+    numerical_df.remove('신용 문제 발생 횟수')
+
+df[numerical_df].describe()
+
+연간소득_data= df['연간 소득']
+bins=4
+연간소득_partial=pd.cut(연간소득_data,bins)
+print(연간소득_partial.unique())
+
+encoder=OneHotEncoder()
+encoded1= encoder.fit_transform('연간소득_partial')
