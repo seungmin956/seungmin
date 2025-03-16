@@ -1,0 +1,94 @@
+★유투브 웹 크롤링 코드
+
+import yt_dlp
+import csv
+
+video_url = "https://www.youtube.com/watch?v=6jg9CwjdJLc"
+
+ydl_opts = {
+    'skip_download': True,  # 영상 다운로드 없이 메타데이터만 가져옴
+    'writeautomaticsub': True,  # 자동 생성된 자막 가져오기
+    'subtitleslangs': ['ko'],  # 한국어 자동 자막 다운로드 시도
+}
+
+# with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+#     info = ydl.extract_info(video_url, download=False)
+#     subtitles = info.get('automatic_captions', {})  # 자동 생성된 자막 가져오기
+
+#     if 'ko' in subtitles:
+#         subtitle_url = subtitles['ko'][0]['url']
+#         print("한국어 자동 생성 자막 URL:", subtitle_url)
+#     else:
+#         print("한국어 자동 생성 자막을 찾을 수 없습니다.")
+
+file=open("c:\\data\\data1.txt","r",encoding="utf-8")
+content=file.read()
+# print(content)
+file.close()
+
+import json
+content=json.loads(content)
+# print(content)
+
+words=[]
+
+for key, value in content.items():
+    for item in value:
+        if 'segs' in item:
+            words.append(item['segs'])
+# print(words)
+
+
+words2 = []
+for sublist in words:
+    for item in sublist:
+        if 'utf8' in item:  
+            words2.append(item['utf8'])
+# print(words2)
+
+joined_words2= ''.join(words2)
+# print(joined_words2)
+
+joined_words2= joined_words2.replace('[음악]','')
+joined_words2= joined_words2.replace('[박수]','')
+# print(joined_words2)
+
+data1_write=open("c:\\data\\data1_write.txt","w",encoding="utf-8")
+csv_writer=csv.writer(data1_write)
+
+for row in joined_words2:
+    csv_writer.writerow([joined_words2])
+
+data1_write.close()
+
+----------------------------------------------------------------
+★자연어 처리 코드 
+
+import re
+import konlpy
+from konlpy.tag import Okt
+import jpype
+
+# 문장 단위로 분리 (혹은, 여러 문장일 경우)
+sentences = joined_words2.split('.')  # 문장 기준으로 분리
+sentences = [sentence.strip() for sentence in sentences if sentence.strip()]
+
+# # 소문자화
+sentences = [sentence.lower() for sentence in sentences]
+
+# # 불용어 제거 (nltk의 불용어를 사용할 수 있음)
+stop_words = set([
+    '어머','이', '그', '저', '을', '를', '에', '의', '가', '은', '는', '로', '으로', '와', '과', '다', '이다', '에서', '까지', '하고', '한', '많이', '좀', '이랑', '하고', '같이'
+])
+
+# 예시로 불용어를 제거하는 코드
+cleaned_sentences = []
+for sentence in sentences:
+    words = sentence.split()
+    cleaned_sentence = [word for word in words if word not in stop_words]
+    cleaned_sentences.append(' '.join(cleaned_sentence))
+
+# # 특수문자 제거
+cleaned_sentences = [re.sub(r'[^\w\s]', '', sentence) for sentence in cleaned_sentences]
+
+print(cleaned_sentences)
