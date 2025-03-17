@@ -1,0 +1,67 @@
+★벡터 데이터베이스 구축
+
+import chromadb
+from chromadb.utils import embedding_functions
+
+def build_vector_database(articles_data):
+    """수집한 기사를 벡터 데이터베이스에 저장합니다."""
+    # Chroma 클라이언트 생성
+    client = chromadb.PersistentClient(path="./chroma_db")
+
+    # 임베딩 함수 설정 (기본 임베딩 함수 사용)
+    basic_ef = embedding_functions.DefaultEmbeddingFunction()
+
+    # 컬렉션 생성 (또는 이미 존재하는 경우 가져오기)
+    collection = client.get_or_create_collection(
+        name="apartment_articles",
+        embedding_function=basic_ef,
+        metadata={"description": "중앙일보 아파트 및 부동산 관련 기사"}
+    )
+
+    # 기존 항목 확인
+    existing_ids = set()
+    if collection.count() > 0:
+        existing_ids = set(collection.get()["ids"])
+
+    # 새로운 기사만 필터링
+    new_articles = [article for article in articles_data if article["id"] not in existing_ids]
+
+    if not new_articles:
+        print("벡터 데이터베이스에 추가할 새 기사가 없습니다.")
+        return
+
+    # 벡터 데이터베이스에 추가할 데이터 준비
+    documents = []  # 기사 내용
+    metadatas = []  # 메타데이터
+    ids = []        # 고유 ID
+
+    for article in new_articles:
+        # 기사 내용 추가
+        documents.append(article["content"])
+
+        # 메타데이터 구성
+        metadata = {
+            "title": article["title"],
+            "source": article["source"],
+            "date": article["date"],
+            "url": article["url"],
+            "keywords": ",".join(article["keywords"]) if article["keywords"] else "",
+            "timestamp": article["timestamp"],
+            "region": article["region"],
+            "price_trend": article["price_trend"],
+            "article_type": article["article_type"]
+        }
+        metadatas.append(metadata)
+
+        # 고유 ID 추가
+        ids.append(article["id"])
+
+    # 벡터 데이터베이스에 데이터 추가
+    collection.add(
+        documents=documents,
+        metadatas=metadatas,
+        ids=ids
+    )
+
+    print(f"{len(documents)}개의 새 기사가 벡터 데이터베이스에 추가되었습니다.")
+    print(f"벡터 데이터베이스에 있는 총 기사 수: {collection.count()}")
