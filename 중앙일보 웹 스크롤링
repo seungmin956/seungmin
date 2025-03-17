@@ -1,0 +1,116 @@
+★ 중앙일보 웹 스크롤링 코드
+
+import urllib.request
+from bs4 import BeautifulSoup
+import json
+import os
+from datetime import datetime
+import time
+import re
+
+def get_article_details_url(keyword, num_pages):
+    encoded_keyword=urllib.parse.quote(keyword)
+    article_urls=[]
+
+    for page in range(1, num_pages+1):
+        list_url=f"https://www.joongang.co.kr/search/news?keyword={encoded_keyword}&page={page}"
+
+        try:
+            request=urllib.request.Request(list_url)
+            response=urllib.request.urlopen(request).read().decode("utf-8")
+            soup=BeautifulSoup(response, "html.parser")
+
+            for headline in soup.select("div.card_body > h2.headline > a"):
+                article_url=headline.get("href")
+                if article_url:
+                    article_urls.append(article_url)
+            time.sleep(1)
+
+        except Exception as e:
+            print(f"페이지{page} 스크래핑 중 오류 발생 :{e}")
+
+    return article_urls
+
+def extract_article_content(url):
+    try:
+        request= urllib.request.Request(url)
+        response=urllib.request.urlopen(request).read().decode("utf-8")
+        soup=BeautifulSoup(response, "html.parser")
+
+        title_element=soup.select_one("h1.headline")
+        title=title_element.text.strip() if title_element else "제목 없음"
+
+        date_element=soup.select_one("time")
+        date=date_element['datetime'] if date_element and 'datetime' in date_element.attrs else datetime.now().strftime("%Y-%m-%d")
+
+        content_elements=soup.select('article.article > div p')
+        content="\n".join([p.text.strip() for p in content_elements])
+        content=content.replace("\n","")
+
+        keyword_elements=soup.select("div.tag_list a")
+        keywords=[k.text.strip() for k in keyword_elements] if keyword_elements else []
+
+        article_id=url.split('/')[-1]
+
+        regions = ["강남", "강북", "서초", "송파", "마포", "용산", "강동", "노원", "분당", "일산", "과천"]
+        article_region='기타'
+        for region in regions:
+            if region in title or region in content[:500]:
+                article_region=region
+                break
+
+        return {
+            "id": f"article_{article_id}",
+            "title": title,
+            "content": content,
+            "source":"중앙일보",
+            "date":date,
+            "url":url,
+            "keywords":keywords,
+            "timestamp":datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+            "region":article_region}
+
+    except Exception as e:
+        print(f"기사 추출 중 오류 발생 ({url}) : {e}")
+        return None
+
+def collect_articles(keywords, pages_per_keyword):
+    data_dir='data'
+    os.makedirs(data_dir, exist_ok=True)
+
+    all_articles=[]
+
+    for keyword in keywords:
+        print(f" '{keyword}' 키워드로 기사 수집 중...")
+        article_urls= get_article_details_url(keyword, pages_per_keyword)
+
+        for url in article_urls:
+            article_data=extract_article_content(url)
+            if article_data and len(article_data["content"])>100:
+                if not any(article["id"]==article_data["id"] for article in all_articles):
+                    all_articles.append(article_data)
+                    print(f"기사 추가됨: {article_data['title']}")
+
+            time.sleep(1.5)
+
+    put_file=os.path.join(data_dir,"articles.json")
+
+    if os.path.exists(output_file):
+        with open(output_file, 'r', encoding="utf-8") as f:
+            existing_ids=[article["id"] for article in existing_articles]
+
+            for article in all_articles:
+                if article['id'] not in existing_ids:
+                    existing_articles.append(article)
+
+            all_articles=existing_articles
+
+        with open (output_file, 'w', encoding='utf-8') as f:
+            json.dump(all_articles, f, ensure_ascii=False, indent=4)
+
+        print(f"총 {len(all_articles)}개의 기사가 {output_file}에 저장되었습니다.")
+        return all_articles
+
+keywords=['부동산','아파트','연립']
+pages_per_keyword=3
+articles=collect_articles(keywords, pages_per_keyword)
