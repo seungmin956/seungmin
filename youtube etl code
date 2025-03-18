@@ -92,3 +92,95 @@ for sentence in sentences:
 cleaned_sentences = [re.sub(r'[^\w\s]', '', sentence) for sentence in cleaned_sentences]
 
 print(cleaned_sentences)
+
+-------------------------------------------------------------------
+import yt_dlp
+import csv
+
+video_url = "https://www.youtube.com/watch?v=ywaXPwFBvSI"
+
+ydl_opts = {
+    'skip_download': True,  # 영상 다운로드 없이 메타데이터만 가져옴
+    'writeautomaticsub': True,  # 자동 생성된 자막 가져오기
+    'subtitleslangs': ['ko'],  # 한국어 자동 자막 다운로드 시도
+}
+
+# with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+#     info = ydl.extract_info(video_url, download=False)
+#     subtitles = info.get('automatic_captions', {})  # 자동 생성된 자막 가져오기
+
+#     if 'ko' in subtitles:
+#         subtitle_url = subtitles['ko'][0]['url']
+#         print("한국어 자동 생성 자막 URL:", subtitle_url)
+#     else:
+#         print("한국어 자동 생성 자막을 찾을 수 없습니다.")
+
+import json
+import re
+
+#파일 읽기
+file=open("c:\\data\\youtube_data2.txt","r",encoding="utf-8")
+content=file.read()
+file.close()
+
+#JSON 파싱
+content=json.loads(content)
+
+#단어 추출
+words=[]
+
+for key, value in content.items():
+    for item in value:
+        if 'segs' in item:
+            words.append(item['segs'])
+
+#단어 리스트로 변환
+words2 = []
+for sublist in words:
+    for item in sublist:
+        if 'utf8' in item:  
+            words2.append(item['utf8'])
+
+#텍스트 결합
+joined_words2= ''.join(words2)
+
+#불필요한 태그 제거
+joined_words2= joined_words2.replace('[음악]','').replace('[박수]','').replace('[웃음]','')
+
+#문장 단위로 분리
+sentences= joined_words2.split('\n')
+sentences=[s.strip() for s in sentences if s.strip()]
+# print(sentences)
+
+with open("c:\\data\\youtube_data2_modify.txt","w",encoding="utf-8") as data2_write:
+    csv_writer = csv.writer(data2_write)
+    csv_writer.writerow(["Sentence"])  # 헤더 추가
+    for sentence in sentences:
+        csv_writer.writerow([sentence])
+
+print("정제된 문장 개수:", len(sentences))
+for i, sentence in enumerate(sentences[:10], 1):  # 상위 10개 문장 미리보기
+    print(f"{i}. {sentence}")
+
+# 화자 분리 예시 (타임스탬프와 키워드 활용)
+speakers = []
+for i, sentence in enumerate(sentences):
+    if "엄마" in sentence or "아빠" in sentence:
+        speakers.append("Child")
+    elif "왜" in sentence and "?" in sentence:
+        speakers.append("Parent")
+    elif len(sentence.split()) < 5 and ("싫어" in sentence or "안" in sentence):
+        speakers.append("Child")
+    else:
+        speakers.append("Unknown")
+
+# 결과 출력
+with open("c:\\data\\youtube_data2_with_speaker.txt", "w", encoding="utf-8") as f:
+    csv_writer = csv.writer(f)
+    csv_writer.writerow(["Speaker", "Sentence"])
+    for speaker, sentence in zip(speakers, sentences):
+        csv_writer.writerow([speaker, sentence])
+
+# 상위 10개 확인
+for i, (speaker, sentence) in enumerate(zip(speakers[:], sentences[:]), 1):
+    print(f"{i}. [{speaker}] {sentence}")
