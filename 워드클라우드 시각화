@@ -1,0 +1,42 @@
+★ 워드클라우드 시각화 코드
+
+import matplotlib.pyplot as plt
+import matplotlib.font_manager as fm
+
+plt.rc("font", family="NanumGothic")
+
+from wordcloud import WordCloud, STOPWORDS
+from os import path
+import re
+import numpy as np
+from PIL import Image
+
+usa_mask=np.array(Image.open("c:\\data\\usa_im.png"))
+
+# d=path.dirname("c:\\data2")
+
+text=open("c:\\data\\youtube_data2_modify.txt", mode='r', encoding='utf-8').read()
+# print(text)
+
+file=open("c:\\data\\word.txt","r",encoding="utf-8")
+word=file.read().split(' ')
+# print(word)
+
+for i in word:
+    text=re.sub(i,'',text) 
+
+text+=',하락'
+# print(text)
+
+wordcloud = WordCloud( font_path = "c:\\data\\NanumGothic.ttf",  # 글씨체
+                                 stopwords=STOPWORDS, # 마침표,느낌표, 쿼테이션등을 정제
+                                 max_words = 700, # 워드 클라우드에 그릴 최대 단어갯수
+                                 background_color='white', # 배경색깔
+                                 max_font_size = 150,  # 최대 글씨 크기
+                                 min_font_size = 1,  # 최소 글씨 크기
+                                 mask = usa_mask,
+                                 colormap='Paired').generate(text).to_file("c:\\data\\result_cound.png")
+
+plt.figure(figsize=(15,15) ) 
+plt.imshow( wordcloud, interpolation='bilinear')  # 글씨가 퍼지는 스타일
+plt.axis("off")
