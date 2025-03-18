@@ -110,3 +110,7 @@ for word in words2:
 for word, count in word_count.items():
     if count > 2:  # 2번 이상 반복된 단어
         print(f"{word}: {count}번")
+
+**다운로드한 mp3 파일이 너무 클 때 분할하기**
+(base) C:\Users\itwill> cd youtube.data
+(base) C:\Users\itwill\youtube.data> "C:\ffmpeg\ffmpeg-7.1.1-essentials_build\bin\ffmpeg.exe" -i output2.mp3 -f segment -segment_time 60 -c copy output_part_%03d.mp3
