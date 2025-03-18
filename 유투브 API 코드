@@ -1,0 +1,42 @@
+def get_youtube_auto_captions_api(url, api_key):
+    import googleapiclient.discovery
+    import googleapiclient.errors
+    import requests
+    from bs4 import BeautifulSoup
+   
+    # YouTube API 클라이언트 설정
+    youtube = googleapiclient.discovery.build("youtube", "v3", developerKey=api_key)
+   
+    # 비디오 ID 추출
+    video_id = url.split("v=")[1]
+   
+    # 자막 목록 가져오기
+    captions = youtube.captions().list(
+        part="snippet",
+        videoId=video_id
+    ).execute()
+   
+    # 자동 생성 자막 찾기
+    caption_id = None
+    for item in captions.get('items', []):
+        if item['snippet']['trackKind'] == 'ASR':  # 자동 생성 자막
+            caption_id = item['id']
+            break
+   
+    if not caption_id:
+        return "자동 생성 자막을 찾을 수 없습니다."
+   
+    # 자막 다운로드 (XML 형식)
+    caption_data = youtube.captions().download(
+        id=caption_id,
+        tfmt="sbv"  # sbv, srt, vtt 등 형식 선택 가능
+    ).execute()
+   
+    # 바이너리 데이터를 텍스트로 변환
+    caption_text = caption_data.decode('utf-8')
+    return caption_text
+
+api_key="AIza..."
+youtube_url="https://www.youtube.com/watch?v=Eaw180JcX8c"
+captions=get_youtube_auto_captions_api(youtube_url,api_key)
+print(captions)
