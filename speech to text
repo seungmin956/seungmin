@@ -1,0 +1,82 @@
+  1.오디오 추출 및 변환할 때 필요한 외부 프로그램 ffmpeg 설치하기
+
+  1-1. https://www.gyan.dev/ffmpeg/builds/
+       위 링크로 들어가서 ffmpeg-release-essentials.zip 파일을 다운로드
+
+  1-2. 다운받은 zip 파일을 원하는 폴더(예: C:\ffmpeg)에 압축 해제
+
+  1-3. C:\ffmpeg\bin 폴더를 시스템 PATH에 추가.
+       -Windows 키 + R → sysdm.cpl 입력 → "고급" 탭 → "환경 변수".
+       -"시스템 변수"에서 Path 찾아 편집.
+       -새 항목 추가: C:\ffmpeg\bin.
+       -설정 후 터미널 재시작.
+
+2. Anaconda Prompt 창 열기
+    
+    pip install yt-dlp
+    yt-dlp -x --audio-format mp3 "영상_URL"
+
+--> ffmpeg 경로 설정 후에도 지속적인 오류 발생시 직접적으로 경로 설정 진행
+yt-dlp -x --audio-format mp3 --ffmpeg-location "C:\ffmpeg\ffmpeg-7.1.1-essentials_build\bin\ffmpeg.exe" "영상_URL"
+
+3. 다운로드 된 MP3 파일 확인 
+
+4. Goggle speech-to-text API 발급하기
+  
+  1-1. 브라우저에서 cloud.google.com에 접속.
+
+  1-2.  Speech-to-Text API 활성화 (이미 했다면 생략)
+        왼쪽 메뉴에서 "API 및 서비스 > 라이브러리" 클릭.
+        검색창에 "Speech-to-Text" 입력.
+        "Cloud Speech-to-Text API" 선택 → "사용 설정" 버튼 클릭.
+        활성화되면 "API 및 서비스" 페이지로 돌아감.
+
+  1-3. 서비스 계정 만들기
+      사용자 인증 정보로 이동:
+      왼쪽 메뉴에서 "API 및 서비스 > 사용자 인증 정보" 클릭.
+      서비스 계정 생성: 상단에 "사용자 인증 정보 추가" 또는 "+ 사용자 인증 정보 만들기" 버튼 클릭
+      드롭다운에서 "서비스 계정" 선택.
+      서비스 계정 세부정보 입력: 이름,설명 입력/ 역할 부여 중요 (Speech Administrator)
+
+  1-4. JSON 키 다운로드
+
+      "사용자 인증 정보" 페이지에서 키 생성
+      "키 유형"에서 "JSON" 선택 (기본값).
+      다운로드
+
+ 5. python 에서 mp3 음성 파일을 텍스트로 추출하기
+
+!pip install google-cloud-speech
+
+from google.cloud import speech
+import os
+
+# 환경 변수 설정
+os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = "json key를 저장한 경로 입력"
+
+client = speech.SpeechClient()
+
+for i in range(1, 10):  # 분할 파일 수에 따라 범위 조정 (예: 1~9)
+    audio_file = f"C:\\Users\\*\\youtube_data\\output_part_{i:03d}.mp3"
+    if not os.path.exists(audio_file):
+        print(f"파일 {audio_file} 없음. 종료.")
+        break
+
+    with open(audio_file, "rb") as audio:
+        content = audio.read()
+
+    config = speech.RecognitionConfig(
+        encoding=speech.RecognitionConfig.AudioEncoding.MP3,
+        sample_rate_hertz=16000,
+        language_code="ko-KR"
+    )
+    audio = speech.RecognitionAudio(content=content)
+
+    operation = client.long_running_recognize(config=config, audio=audio)
+    print(f"{audio_file} 처리 중... (조금 걸릴 수 있어요)")
+    response = operation.result(timeout=600)
+
+    for result in response.results:
+        print(f"전사 결과 ({audio_file}):", result.alternatives[0].transcript)
+
+print("모든 파일 처리 완료!")
