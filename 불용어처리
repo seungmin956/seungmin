@@ -1,0 +1,45 @@
+from konlpy.tag import Okt
+import re
+
+# 텍스트 예시 (유튜브 스크립트라고 가정)
+text = "아이가 말을 안 들어요. 매일 싸우고 힘들어요."
+
+# Okt 객체 생성
+okt = Okt()
+
+# 형태소 분석 및 명사 추출
+morphs = okt.morphs(text)  # 형태소 단위로 분리
+nouns = okt.nouns(text)    # 명사만 추출
+
+# 불용어 리스트 (필요에 따라 추가)
+stopwords = ['이', '가', '을', '를', '은', '는', '에', '요', '고']
+
+# 불용어 제거
+filtered_morphs = [word for word in morphs if word not in stopwords]
+filtered_nouns = [word for word in nouns if word not in stopwords]
+
+print("원문:", text)
+print("형태소:", morphs)
+print("명사:", nouns)
+print("불용어 제거 후 형태소:", filtered_morphs)
+print("불용어 제거 후 명사:", filtered_nouns)
+
+
+원문: 아이가 말을 안 들어요. 매일 싸우고 힘들어요.
+형태소: ['아이가', '말을', '안', '들어요', '.', '매일', '싸우고', '힘들어요', '.']
+명사: ['아이', '말', '매일']
+불용어 제거 후 형태소: ['아이가', '말을', '안', '들어요', '.', '매일', '싸우고', '힘들어요', '.']
+불용어 제거 후 명사: ['아이', '말', '매일']
+
+pip install kiwipiepy
+from kiwipiepy import Kiwi
+
+kiwi = Kiwi()
+text = "아이가 말을 안 들어요."
+tokens = kiwi.tokenize(text)
+nouns = [token.form for token in tokens if token.tag.startswith('N')]
+print("형태소:", [token.form for token in tokens])
+print("명사:", nouns)
+
+
+**"이", "가", "을", "를", "은", "는", "에", "요", "아", "야", "아이", "아이고", "뭐", "왜", "어떻게", "근데", "그래서", "이제", "너", "나", "이거", "그거", "있다", "없다", "돼", "안"
