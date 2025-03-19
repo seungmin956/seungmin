@@ -1,0 +1,99 @@
+import numpy as np
+import pandas as pd
+import matplotlib.pyplot as plt
+from wordcloud import WordCloud
+from collections import Counter
+import re
+
+# 텍스트 파일 읽기
+with open('c:\\Users\\itwill\\youtube_data\\transcription.txt', 'r', encoding='utf-8') as file:
+    text = file.read()
+
+# 긍정적인 단어 사전
+positive_words = [
+    '기쁨', '귀엽', '예쁘', '좋아', '사랑', '재미', '감동', '행복', '인기',
+    '힐링', '탄탄', '멋', '완벽', '추천', '깔끔', '고퀄', '퀄리티', '명품', 
+    '안전', '만족', '섬세', '디테일', '깨끗', '최고', '상쾌', '포근', '신뢰',
+    '편리', '인증', '우수', '환상', '흥행', '공감', '훈훈', '오래', '인기', '철학',
+    '멋있', '아름', '성공', '굉장', '대박', '정밀', '뛰어나'
+]
+
+# 부정적인 단어 사전
+negative_words = [
+    '슬픔', '불안', '당황', '버럭', '따분', '부럽', '까칠', '소심', '분노',
+    '걱정', '불상사', '엄청', '심각', '무서', '나쁘', '안좋', '싫어', '지랄발광',
+    '짜증', '예민', '힘들', '어렵', '문제', '삐꾸', '그러하듯', '고민', '불만',
+    '떨어지', '실수', '흔들림', '오류', '위험', '아쉬', '실망'
+]
+
+# 불용어 설정
+custom_stopwords = {
+    '인사이드', '아웃', '라일리', '차량', '방향제', '메이튼', '자동차', '디즈니', '픽사',
+    '그리고', '하지만', '그러나', '때문에', '이렇게', '정말', '너무', '그냥', '진짜',
+    '있었', '있는', '하는', '하고', '되는', '된다', '우리', '자신', '모두', '이런',
+    '것이', '그런', '정도', '같은', '같습니다', '것을', '것도', '이것', '저는', '까지',
+    '것이다', '했어요', '합니다', '하면', '하게', '하다', '이제', '우리', '저희', '했던',
+    '있습니다', '한번', '이제', '이거', '뭐예', '돼다', '되어', '없어', '해요', '정도'
+}
+
+# 텍스트 전처리 (특수문자 제거/ 여러 공백을 하나의 공백으로 변경)
+def preprocess_text(text):
+    text=re.sub('[^가-힣ㄱ-ㅎㅏ-ㅣa-zA-Z]',' ' ,text)
+    text=re.sub(' +',' ',text)
+    return text
+
+# print(preprocess_text(text))
+
+
+#단어 추출 함수 (단순 공백 기반 분리)
+def extract_words(Text):
+    words=text.split() 
+    a=[]
+    for word in words:
+        if len(word)>=2:
+            a.append(word)
+    return a
+
+# result1=preprocess_text(text)
+# result2=extract_words(result1)
+# print(result2)
+
+# 감성 단어 추출 함수 
+def extract_sentiment_words(all_words, sentiment_dict):
+
+    sentiment_words = [ ]
+
+    for word in all_words:
+        for senti_word in sentiment_dict:
+            if senti_word in word:
+                sentiment_words.append(word)
+                break
+    return sentiment_words
+
+preprocess_text= preprocess_text(text) #전처리 함수 호출
+all_words=extract_words(preprocess_text) #단어 추출 함수 호출
+positive_words= extract_sentiment_words(all_words, positive_words) #긍정 단어 추출 함수 호출
+negative_words= extract_sentiment_words(all_words, negative_words) #부정 단어 추출 함수 호출
+        
+print(positive_words)
+print(negative_words)
+
+
+#단어 빈도수 계산
+
+positive_extracted= extract_sentiment_words(all_words, positive_words)
+negative_extracted= extract_sentiment_words(all_words, negative_words)
+
+positive_word_counts=Counter(positive_extracted)
+negative_word_counts=Counter(negative_extracted)
+
+import pandas as pd
+# #긍정 단어 빈도수 출력
+# df=pd.Series(positive_word_counts).reset_index()
+# df.columns=['단어','빈도수']
+# df.sort_values(by='빈도수', ascending=False)
+
+#부정정 단어 빈도수 출력
+df2=pd.Series(negative_word_counts).reset_index()
+df2.columns=['단어','빈도수']
+df2.sort_values(by='빈도수', ascending=False)
