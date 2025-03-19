@@ -1,0 +1,11 @@
+
+
+1. 아나콘다 프롬프트창을 열고
+
+2. conda info --envs
+
+3. conda  activate real_estimate_qa
+
+4. cd real_estate_qa_project
+
+5. jupyter notebook
