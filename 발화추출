@@ -1,0 +1,155 @@
+발화 추출하기
+import torch
+
+# device=torch.device("cuda" if torch.cuda.is_available() else "cpu")
+# print(f"사용중인 디바이스: {device}")
+
+with open("C:\\data\\geumcchok\\transcription10.txt", "r", encoding="utf-8") as f:
+    lines = f.readlines()
+
+sample_lines = lines[:50]
+
+with open("C:\\data\\geumcchok\\transcription10_sample.txt", "w", encoding="utf-8") as f:
+    for line in sample_lines:
+        f.write(line)
+
+import re
+
+with open("C:\\data\\geumcchok\\transcription10_sample.txt", "r", encoding="utf-8") as f:
+    lines_sample = f.readlines()
+
+# print(lines_sample)
+
+data=[]
+for line in lines_sample:
+    match=re.match(r'\[(\d)\]\s*(.+)', line)
+    if match:
+        label = int(match.group(1))  # [2] → 2
+        text = match.group(2).strip()  # 문장 부분
+        data.append({"text": text, "label": label})
+        
+df=pd.DataFrame(data)
+print(df)
+
+df.to_csv("c:\\data\\geumcchok\\labeled_data.csv", index=False, encoding="utf-8-sig")
+print("labeled_data.csv 저장 완료")
+
+####################
+import torch
+import pandas as pd
+from transformers import BertForSequenceClassification, BertTokenizer
+from torch.optim import AdamW
+from torch.utils.data import DataLoader, Dataset
+from tqdm import tqdm
+
+# 디바이스 설정
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+print(f"사용 중인 디바이스: {device}")
+
+# 1. 데이터셋 클래스 정의
+class SpeechDataset(Dataset):
+    def __init__(self, texts, labels, tokenizer, max_len=128):
+        self.texts = texts
+        self.labels = labels
+        self.tokenizer = tokenizer
+        self.max_len = max_len
+
+    def __len__(self):
+        return len(self.texts)
+
+    def __getitem__(self, idx):
+        text = str(self.texts[idx])
+        label = self.labels[idx]
+
+        encoding = self.tokenizer.encode_plus(
+            text,
+            add_special_tokens=True,
+            max_length=self.max_len,
+            padding="max_length",
+            truncation=True,
+            return_attention_mask=True,
+            return_tensors="pt"
+        )
+
+        return {
+            "input_ids": encoding["input_ids"].flatten(),
+            "attention_mask": encoding["attention_mask"].flatten(),
+            "labels": torch.tensor(label, dtype=torch.long)
+        }
+
+# 2. KoBERT 모델과 토크나이저 로드
+model = BertForSequenceClassification.from_pretrained("monologg/kobert", num_labels=4)
+tokenizer = BertTokenizer.from_pretrained("monologg/kobert")  # transformers의 BertTokenizer 사용
+model.to(device)
+
+# 3. 학습 데이터 로드
+df = pd.read_csv("C:\\data\\geumcchok\\labeled_data.csv")
+texts = df["text"].values
+labels = df["label"].values
+
+dataset = SpeechDataset(texts, labels, tokenizer)
+dataloader = DataLoader(dataset, batch_size=16, shuffle=True)
+
+# 4. 모델 fine-tuning
+optimizer = AdamW(model.parameters(), lr=2e-5)
+epochs = 3
+model.train()
+
+for epoch in range(epochs):
+    print(f"Epoch {epoch + 1}/{epochs}")
+    total_loss = 0
+    for batch in tqdm(dataloader):
+        input_ids = batch["input_ids"].to(device)
+        attention_mask = batch["attention_mask"].to(device)
+        labels = batch["labels"].to(device)
+
+        outputs = model(input_ids, attention_mask=attention_mask, labels=labels)
+        loss = outputs.loss
+
+        loss.backward()
+        optimizer.step()
+        optimizer.zero_grad()
+
+        total_loss += loss.item()
+
+    avg_loss = total_loss / len(dataloader)
+    print(f"Average Loss: {avg_loss:.4f}")
+
+# 모델 저장
+model.save_pretrained("C:\\data\\geumcchok\\kobert_speaker_classifier")
+tokenizer.save_pretrained("C:\\data\\geumcchok\\kobert_speaker_classifier")
+
+# 5. 예측
+model.eval()
+with open("C:\\data\\geumcchok\\transcription3.txt", "r", encoding="utf-8") as f:
+    lines = [line.strip() for line in f.readlines() if line.strip()]
+
+predictions = []
+for line in lines:
+    encoding = tokenizer.encode_plus(
+        line,
+        add_special_tokens=True,
+        max_length=128,
+        padding="max_length",
+        truncation=True,
+        return_attention_mask=True,
+        return_tensors="pt"
+    )
+
+    input_ids = encoding["input_ids"].to(device)
+    attention_mask = encoding["attention_mask"].to(device)
+
+    with torch.no_grad():
+        outputs = model(input_ids, attention_mask=attention_mask)
+        predicted_label = torch.argmax(outputs.logits, dim=1).item()
+        predictions.append((line, predicted_label))
+
+# 6. 부모 발화 추출 및 저장
+parent_speech = []
+with open("C:\\data\\geumcchok\\parent_speech_3.txt", "w", encoding="utf-8") as f:
+    for text, label in predictions:
+        if label in [0, 1]:  # 엄마(0) 또는 아빠(1)
+            parent_speech.append(text)
+            f.write(text + "\n")
+
+print("추출된 부모 발화:", parent_speech)
