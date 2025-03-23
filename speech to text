@@ -94,6 +94,50 @@ with open(output_path, "w", encoding="utf-8") as output_text:
 
 print("모든 파일 처리 완료!")
 
+또는
+
+import os
+from google.cloud import speech
+
+client = speech.SpeechClient()  # Google Cloud 인증 필요
+words = []
+
+for i in range(3, 11):
+    for j in range(0, 150):
+        audio_file = f"C:\\data\\geumcchok\\datai\\output_{j:03d}.mp3"
+        if not os.path.exists(audio_file):
+            print(f"파일 {audio_file} 없음. 종료.")
+            break
+        
+        with open(audio_file, "rb") as audio:
+            content = audio.read()
+    
+        config = speech.RecognitionConfig(
+            encoding=speech.RecognitionConfig.AudioEncoding.MP3,
+            sample_rate_hertz=16000,
+            language_code="ko-KR"
+        )
+        audio = speech.RecognitionAudio(content=content)
+    
+        try:
+            operation = client.long_running_recognize(config=config, audio=audio)
+            print(f"{audio_file} 처리 중... (조금 걸릴 수 있어요)")
+            response = operation.result(timeout=600)
+            for result in response.results:
+                transcript = result.alternatives[0].transcript
+                words.append(transcript)
+                print(f"{audio_file} 결과: {transcript}")
+        except Exception as e:
+            print(f"{audio_file} 처리 실패: {e}")
+            break
+
+    print("최종 결과:", words)
+
+    output_path="C:\\data\\geumcchok\\transcription3.txt"
+    with open(output_path, "w", encoding="utf-8") as output_text:
+        for row in words:
+            output_text.write(row + "\n")
+
 6. 자주 나오는 단어 추출하기
 # !pip install konlpy
 
