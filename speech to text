@@ -100,11 +100,17 @@ import os
 from google.cloud import speech
 
 client = speech.SpeechClient()  # Google Cloud 인증 필요
-words = []
 
+# data3부터 data10까지 루프
 for i in range(3, 11):
+    words = []  # 각 폴더마다 words 리스트 초기화
+    
+    # 폴더 경로 동적으로 설정 (data3, data4, ..., data10)
+    folder_path = f"C:\\data\\geumcchok\\data{i}"
+    
+    # 해당 폴더의 output_XXX.mp3 파일 처리
     for j in range(0, 150):
-        audio_file = f"C:\\data\\geumcchok\\datai\\output_{j:03d}.mp3"
+        audio_file = f"{folder_path}\\output_{j:03d}.mp3"
         if not os.path.exists(audio_file):
             print(f"파일 {audio_file} 없음. 종료.")
             break
@@ -131,13 +137,14 @@ for i in range(3, 11):
             print(f"{audio_file} 처리 실패: {e}")
             break
 
-    print("최종 결과:", words)
+    print(f"data{i} 최종 결과:", words)
 
-    output_path="C:\\data\\geumcchok\\transcription3.txt"
+    # 출력 파일 경로 동적으로 설정 (transcription3.txt, transcription4.txt, ...)
+    output_path = f"C:\\data\\geumcchok\\transcription{i}.txt"
     with open(output_path, "w", encoding="utf-8") as output_text:
         for row in words:
             output_text.write(row + "\n")
-
+    print(f"{output_path}에 저장 완료")
 6. 자주 나오는 단어 추출하기
 # !pip install konlpy
 
