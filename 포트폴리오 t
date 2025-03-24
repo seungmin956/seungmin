@@ -1,0 +1,158 @@
+▶주제: 금쪽이(문제있는 아이)를 만드는 부모의 언어 습관이 있는가?
+
+  부모의 언어 습관이 아이에게 미치는 영향을 분석하고, 문제 있는 아이를 둔 부모의 언어 패턴을 이해하며,
+  이를 바탕으로 개선 방안을 제안하고자 한다.
+  "금쪽같은 내새끼" 프로그램의 스크립트 데이터를 활용해 부모의 부정적인 언어 사용 빈도와 맥락을 분석하고 패턴을 도출한다.
+
+▶데이터 수집:
+
+  데이터 출처: https://www.youtube.com/watch?v=m99VVwGchLA
+              https://www.youtube.com/watch?v=pGbKbEjp8eA
+              https://www.youtube.com/watch?v=W_DrXbE5Kls
+              https://www.youtube.com/watch?v=N48TwNmo1Mg
+              https://www.youtube.com/watch?v=Dg9-MRpKri8
+              https://www.youtube.com/watch?v=YPkxzLSqC0E
+              https://www.youtube.com/watch?v=VgxcYsDhMJU
+              https://www.youtube.com/watch?v=7ztaOrOQMyg
+              https://www.youtube.com/watch?v=r0APc81Hcbc
+              https://www.youtube.com/watch?v=MheuyMixECI
+
+  수집 방법: 각 회차의 대화 내용을 "Daglo"를 활용하여 화자가 분리된 텍스트 파일로 추출한다.
+
+
+▶데이터 전처리:
+
+1. 1차 정제 (부모 대화 부분만 추출하기)
+
+with open("c:\\data\\photofolio1.txt", "r", encoding="utf-8") as f:
+    lines = f.readlines()
+
+data = []
+
+time_pattern = r'^\d{2}:\d{2}'
+speaker_pattern = r'화자 \d+'
+
+current_time = None
+current_speaker = None
+current_content = []
+
+for line in lines:
+    line = line.strip()  # 공백 제거
+    
+    # 시간 패턴 확인
+    if re.match(time_pattern, line):
+        # 이전 대화가 있다면 저장
+        if current_time and current_speaker and current_content:
+            data.append({
+                'Time': current_time,
+                'Speaker': current_speaker,
+                'Content': ' '.join(current_content).strip()
+            })
+        
+        # 새로운 시간, 화자, 대화 내용 초기화
+        current_time = line.split()[0]  # 시간 추출 (예: 00:05)
+        current_speaker = ' '.join(line.split()[1:3])  # 화자 추출 (예: 화자 1)
+        current_content = line.split()[3:]  # 대화 내용 초기화
+    
+    # 화자가 없고 대화 내용이 이어지는 경우
+    elif line and not re.match(speaker_pattern, line):
+        current_content.append(line)
+
+# 마지막 대화 저장
+if current_time and current_speaker and current_content:
+    data.append({
+        'Time': current_time,
+        'Speaker': current_speaker,
+        'Content': ' '.join(current_content).strip()
+    })
+
+# 데이터프레임 생성
+df = pd.DataFrame(data, columns=['Time', 'Speaker', 'Content'])
+df['Speaker_Number'] = df['Speaker'].str.extract(r'(\d+)').astype(int)
+
+# 화자 3의 Content만 추출 (Series로)
+df = df.loc[df.Speaker_Number == 3, 'Content']
+print(df)
+
+# 리스트로 변환
+df2 = df.values.tolist()
+print(df2)
+
+# 텍스트 파일로 저장 (수정된 부분)
+with open('c:\\data\\output.txt', 'w', encoding='utf-8') as f:
+    for item in df2:
+        f.write(str(item) + '\n')  # 각 요소를 문자열로 변환 후 한 줄씩 저장
+
+
+2. 2차 정제 (텍스트 전처리, 형태소 분석을 통한 단어 추출, 감성 담어 추출 함수 생성)
+
+# 텍스트 전처리
+def preprocess_text(text):
+    text = re.sub('[^가-힣ㄱ-ㅎㅏ-ㅣa-zA-Z]', ' ', text)  # 특수문자 제거
+    text = re.sub(' +', ' ', text)  # 공백 정리
+    return text
+
+# 형태소 분석을 통한 단어 추출
+def extract_words(text):
+    okt = Okt()
+    words = okt.morphs(text)  # 형태소 분석
+    return [word for word in words if len(word) >= 1]  # 1글자 이상 단어 추출
+
+# 감성 단어 추출 함수
+def extract_sentiment_words(all_words, sentiment_dict):
+    return [word for word in all_words if word in sentiment_dict]  # 정확한 단어 매칭
+
+# 텍스트 전처리
+preprocessed_text = preprocess_text(text)
+
+# 모든 단어 추출
+all_words = extract_words(preprocessed_text)
+
+▶데이터 분석: 
+# 텍스트 파일 읽기
+with open('c:\\data\\output.txt', 'r', encoding='utf-8') as file:
+    text = file.read()
+
+# 긍정 단어 사전 파일 추가
+with open('c:\\data\\pos_pol_word.txt', 'r', encoding='utf-8') as file:
+    additional_positive_words = [line.strip() for line in file.readlines()]
+
+# 부정 단어 사전 파일 추가
+with open('c:\\data\\neg_pol_word.txt', 'r', encoding='utf-8') as file:
+    additional_negative_words = [line.strip() for line in file.readlines()]
+
+# 긍정적인 단어 사전 (추가 단어 통합)
+positive_words = [
+    '기쁨', '귀엽', '예쁘', '좋아', '사랑', '재미', '감동', '행복', '인기',
+    '힐링', '탄탄', '멋', '완벽', '추천', '깔끔', '고퀄', '퀄리티', '명품',
+    '안전', '만족', '섬세', '디테일', '깨끗', '최고', '상쾌', '포근', '신뢰',
+    '편리', '인증', '우수', '환상', '흥행', '공감', '훈훈', '오래', '인기', '철학',
+    '멋있', '아름', '성공', '굉장', '대박', '정밀', '뛰어나'
+] + additional_positive_words
+
+부정적인 단어 사전 (추가 단어 통합)
+negative_words = [
+    "안돼", "하지마", "혼나", "위험", "조절",  # 통제/억압
+    "화", "짜증", "속상해", "억울해", "걱정",    # 감정적 압박
+    "실수", "잘못", "너 때문에", "왜",          # 비판/책임 전가
+    "바빠", "포기", "모르겠어", "답답", "외로워" # 무시/방치
+] + additional_negative_words
+
+# 긍정/부정 단어 추출
+positive_extracted = extract_sentiment_words(all_words, positive_words)
+negative_extracted = extract_sentiment_words(all_words, negative_words)
+
+# 긍정/부정 단어 빈도수 계산
+positive_word_counts = Counter(positive_extracted)
+negative_word_counts = Counter(negative_extracted)
+
+▶데이터 시각화:
+
+
+
+
+
+
+
+
+▶결론:
