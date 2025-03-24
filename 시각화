@@ -1,0 +1,58 @@
+import pandas as pd
+from wordcloud import WordCloud
+import matplotlib.pyplot as plt
+import numpy as np
+
+# 데이터 로드 (파일 경로를 실제 데이터에 맞게 수정하세요)
+df = pd.read_csv('your_data.csv')  # 열: 'episode', 'sentiment', 'text'
+
+# 회차와 감정 목록 정의
+episodes = ['이솝만', '박정희', '건훈', '노백우', '김영삼']
+sentiments = ['긍정', '부정']
+
+# 그리드 형태로 그림 설정
+fig, axes = plt.subplots(nrows=len(episodes), ncols=len(sentiments), figsize=(10, 15))
+
+# 긍정 및 부정 감정에 대한 색상 함수 정의
+def positive_color(word, font_size, position, orientation, random_state=None, **kwargs):
+    return f"rgb({np.random.randint(150, 255)}, 0, 0)"  # 빨간색 계열
+
+def negative_color(word, font_size, position, orientation, random_state=None, **kwargs):
+    return f"rgb(0, 0, {np.random.randint(150, 255)})"  # 파란색 계열
+
+# 한국어 폰트 지정 (시스템에 맞는 폰트 경로로 수정하세요)
+# Windows: 'C:/Windows/Fonts/malgun.ttf' (맑은 고딕)
+# macOS: '/System/Library/Fonts/AppleGothic.ttf'
+font_path = 'C:/Windows/Fonts/malgun.ttf'  # 실제 경로로 변경
+
+# 각 회차와 감정에 대해 워드 클라우드 생성
+for i, episode in enumerate(episodes):
+    for j, sentiment in enumerate(sentiments):
+        # 해당 회차와 감정에 맞는 텍스트 추출 및 결합
+        text = df[(df['episode'] == episode) & (df['sentiment'] == sentiment)]['text'].str.cat(sep=' ')
+        
+        # 감정에 따라 색상 함수 선택
+        color_func = positive_color if sentiment == '긍정' else negative_color
+        
+        # 워드 클라우드 생성
+        wordcloud = WordCloud(width=400, height=300, background_color='white',
+                              color_func=color_func, font_path=font_path).generate(text)
+        
+        # 워드 클라우드 표시
+        ax = axes[i, j]
+        ax.imshow(wordcloud, interpolation='bilinear')
+        ax.axis('off')
+
+# 회차(행)와 감정(열) 레이블 추가
+for i, episode in enumerate(episodes):
+    axes[i, 0].set_ylabel(episode, fontsize=12)
+
+for j, sentiment in enumerate(sentiments):
+    axes[0, j].set_title(sentiment, fontsize=14)
+
+# 전체 그림 제목 추가
+plt.suptitle('당신 곁에 사자를 볼까 [Word Cloud]', fontsize=16)
+
+# 레이아웃 조정 및 출력
+plt.tight_layout()
+plt.show()
