@@ -1,0 +1,186 @@
+# 1. 긍정, 부정 단어 정리 코드들 
+
+import numpy as np
+import pandas as pd
+import matplotlib.pyplot as plt
+from wordcloud import WordCloud
+from collections import Counter # 단어 빈도수 계산
+import re
+
+# 텍스트 파일 읽기
+with open('c:\\data\\output.txt', 'r', encoding='utf-8') as file: # 파일을 읽기 모드로 엽니다.
+    text = file.read()
+
+# 긍정 단어 사전 파일 추가
+with open('c:\\data\\pos_pol_word.txt','r',encoding='utf-8') as file: # 파일을 읽기 모드로 엽니다.
+    additional_positive_words =[]
+    for line in file.readlines():
+        additional_positive_words.append(line.strip())
+
+# 부정 단어 사전 파일 추가
+with open('c:\\data\\neg_pol_word.txt','r',encoding='utf-8') as file: # 파일을 읽기 모드로 엽니다.
+    additional_negative_words =[]
+    for line in file.readlines():
+        additional_negative_words.append(line.strip())
+
+
+# 긍정적인 단어 사전
+positive_words = [
+    '기쁨', '귀엽', '예쁘', '좋아', '사랑', '재미', '감동', '행복', '인기',
+    '힐링', '탄탄', '멋', '완벽', '추천', '깔끔', '고퀄', '퀄리티', '명품', 
+    '안전', '만족', '섬세', '디테일', '깨끗', '최고', '상쾌', '포근', '신뢰',
+    '편리', '인증', '우수', '환상', '흥행', '공감', '훈훈', '오래', '인기', '철학',
+    '멋있', '아름', '성공', '굉장', '대박', '정밀', '뛰어나'
+] 
+# + additional_positive_words
+
+# 부정적인 단어 사전
+negative_words=[
+    "안돼", "하지마", "혼나", "위험", "조절",  # 통제/억압
+    "화", "짜증", "속상해", "억울해", "걱정",    # 감정적 압박
+    "실수", "잘못", "너 때문에", "왜",          # 비판/책임 전가
+    "바빠", "포기", "모르겠어", "답답", "외로워" # 무시/방치
+]
+# + additional_negative_words
+
+# 강조할 단어 및 가중치 설정
+
+# positive_boost = {'토지거래허가': 10, 'GTX': 8, '대출규제완화' : 7, '금리' : 6 }
+# negative_boost = {'탄핵정국': 12, '인플레이션': 10, '불안심리' : 8}
+
+
+# # 불용어 설정
+# custom_stopwords = {'아파트','가격','부동산', 
+#     '인사이드', '아웃', '라일리', '차량', '방향제', '메이튼', '자동차', '디즈니', '픽사',
+#     '그리고', '하지만', '그러나', '때문에', '이렇게', '정말', '너무', '그냥', '진짜',
+#     '있었', '있는', '하는', '하고', '되는', '된다', '우리', '자신', '모두', '이런',
+#     '것이', '그런', '정도', '같은', '같습니다', '것을', '것도', '이것', '저는', '까지',
+#     '것이다', '했어요', '합니다', '하면', '하게', '하다', '이제', '우리', '저희', '했던',
+#     '있습니다', '한번', '이제', '이거', '뭐예', '돼다', '되어', '없어', '해요', '정도'
+# }
+
+
+# 텍스트 전처리
+def preprocess_text(text):
+    # 특수문자 제거
+    text = re.sub('[^가-힣ㄱ-ㅎㅏ-ㅣa-zA-Z]', ' ', text) # 한글, 영어가 아닌것은 공백으로 대체 
+    # 여러 공백을 하나의 공백으로 변경
+    text = re.sub(' +', ' ', text) # 공백이 한개 이상인 것은 공백으로 대체
+    return text
+ 
+# 단어 추출 함수 (단순 공백 기반 분리)
+def extract_words(text):
+    words = text.split() # 공백을 기준으로 분리해서 리스트로 만듭니다.
+    a = [ ]
+    for word in words:
+        if len(word) >= 2: # 단어의 길이가 2보다 작으면
+            a.append(word)
+    return a
+
+# 감성 단어 추출 함수 
+def extract_sentiment_words(all_words, sentiment_dict):
+    sentiment_words = [ ] # 빈 리스트 생성
+
+    for word in all_words: # all_words 리스트의 요소를 하나씩 가져옵니다.
+        for senti_word in sentiment_dict:
+            if senti_word in word: # 만약 감성사전에 있는 단어가 단어에 있다면
+                sentiment_words.append(word) # 리스트에 추가합니다.
+                break
+    return sentiment_words
+
+# 텍스트 전처리 
+preprocess_text = preprocess_text(text)  # 전처리 함수 호출
+
+# 모든 단어 추출 
+all_words = extract_words(preprocess_text) # 단어 추출 함수 호출
+
+# 긍정/부정 단어 추출
+positive_extracted = extract_sentiment_words(all_words, positive_words) # 긍정 단어 추출 함수 
+negative_extracted = extract_sentiment_words(all_words, negative_words) # 부정 단어 추출 함수 
+
+
+# 긍정/부정 단어 빈도수 계산
+positive_word_counts = Counter(positive_extracted) # 단어 빈도수 계산
+negative_word_counts = Counter(negative_extracted) # 단어 빈도수 계산
+
+# # 강조할 단어 추가 (가중치 적용)
+# for word, weight in positive_boost.items():
+#     positive_word_counts[word] += weight 
+
+# for word, weight in negative_boost.items():
+#     negative_word_counts[word] += weight 
+
+# # # 불용어 추가 제거 
+# # del positive_word_counts['아파트']
+# # del positive_word_counts['부동산']
+# # del positive_word_counts['있습니다']
+# # del negative_word_counts['부동산']
+# # del negative_word_counts['아파트']
+
+
+
+# 2. 워드클라우드 생성 코드들
+def generate_wordcloud(word_counter, title, color_map): # 단어빈도수, 제목, 색상맵
+    font_path = 'c:\\windows\\fonts\\malgun.ttf' # 한글 폰트 경로
+
+    wc = WordCloud(  # 워드클라우드 객체 생성
+        font_path=font_path, # 폰트 경로
+        background_color='white', # 배경색
+        max_words=100, # 최대 단어 수
+        colormap=color_map, # 색상맵
+        width=800, # 너비
+        height=500 # 높이
+        # stopwords=custom_stopwords # 불용어 (예: 그러나, 그리고, 그런, 이런)
+    )
+
+    word_freq = dict(word_counter) # Counter 객체를 딕셔너리로 변환
+
+    if not word_freq: # 만약 딕셔너리가 비어있다면
+        print('단어가 없습니다.') # 단어가 없다고 출력합니다.
+        return None # 아무것도 반환하지 않습니다.
+    
+    wc.generate_from_frequencies(word_freq) # 단어 빈도수를 이용하여 워드클라우드를 만듭니다.
+
+    return  wc  # 워드클라우드 객체 반환
+
+# 부정 워드 클라우드 생성
+plt.subplot(1, 2, 2) # 1행 2열 중 2번째
+negative_wc = generate_wordcloud(negative_word_counts, "부정단어", 'plasma') # 부정 워드클라우드 생성, winter 색상맵
+if negative_wc: # 만약 워드클라우드가 있다면
+    plt.imshow(negative_wc, interpolation='lanczos') # 워드클라우드를 이미지로 출력합니다.,bilinear(실루엣 형식)
+    plt.axis('off') # 축을 꺼줍니다.
+#     plt.title('최근 아파트 가격 변화에 대한 부정 워드 클라우드', fontsize=20, color='grey',fontweight='bold', pad=30) # 제목
+
+
+
+# # 3. 그래프 실행코드 
+
+# import matplotlib.pyplot as plt  # 시각화 모듈
+# from wordcloud import WordCloud  # 워드클라우드 모듈
+# import os # 파일 경로 설정을 위한 모듈 
+
+# # 제목 한글 깨짐 방지
+# plt.rcParams['font.family'] = 'Malgun Gothic' # 맑은 고딕으로 설정
+
+# # 결과 디렉토리 생성 
+# if not os.path.exists('c:\\data\\result'): # 만약 'c:\\data\\result' 디렉토리가 없다면
+#     os.makedirs('c:\\data\\result') # 'c:\\data\\result' 디렉토리를 생성합니다.
+
+# # 긍정/부정 워드 클라우드 생성 
+# plt.figure(figsize=(20, 10)) # 그래프 크기를 가로로 더 길게 설정 (figsize=(가로, 세로))
+
+# # 긍정 워드 클라우드 생성
+# plt.subplot(1, 2, 1) # 1행 2열 중 1번째
+# positive_wc = generate_wordcloud(positive_word_counts, '긍정적인 표현', 'plasma') # 긍정 워드클라우드 생성, summer 색상맵
+# if positive_wc: # 만약 워드클라우드가 있다면
+#     plt.imshow(positive_wc, interpolation='lanczos') # 워드클라우드를 이미지로 출력합니다.,bilinear(실루엣 형식)
+#     plt.axis('off') # 축을 꺼줍니다.
+#     plt.title('최근 아파트 가격 변화에 대한 긍정 워드 클라우드', fontsize=20, color='grey',fontweight='bold', pad=30) # 제목
+
+# # 부정 워드 클라우드 생성
+# plt.subplot(1, 2, 2) # 1행 2열 중 2번째
+# negative_wc = generate_wordcloud(negative_word_counts, '부정적인 표현', 'plasma') # 부정 워드클라우드 생성, winter 색상맵
+# if negative_wc: # 만약 워드클라우드가 있다면
+#     plt.imshow(negative_wc, interpolation='lanczos') # 워드클라우드를 이미지로 출력합니다.,bilinear(실루엣 형식)
+#     plt.axis('off') # 축을 꺼줍니다.
+#     plt.title('최근 아파트 가격 변화에 대한 부정 워드 클라우드', fontsize=20, color='grey',fontweight='bold', pad=30) # 제목
