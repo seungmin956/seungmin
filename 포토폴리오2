@@ -1,0 +1,104 @@
+import numpy as np
+import pandas as pd
+import matplotlib.pyplot as plt
+from wordcloud import WordCloud
+from collections import Counter
+import re
+from konlpy.tag import Okt
+
+# 텍스트 파일 읽기
+with open('c:\\data\\output.txt', 'r', encoding='utf-8') as file:
+    text = file.read()
+
+# 긍정 단어 사전 파일 추가
+with open('c:\\data\\pos_pol_word.txt', 'r', encoding='utf-8') as file:
+    additional_positive_words = [line.strip() for line in file.readlines()]
+
+# 부정 단어 사전 파일 추가
+with open('c:\\data\\neg_pol_word.txt', 'r', encoding='utf-8') as file:
+    additional_negative_words = [line.strip() for line in file.readlines()]
+
+# 긍정적인 단어 사전 (추가 단어 통합)
+positive_words = [
+    '기쁨', '귀엽', '예쁘', '좋아', '사랑', '재미', '감동', '행복', '인기',
+    '힐링', '탄탄', '멋', '완벽', '추천', '깔끔', '고퀄', '퀄리티', '명품',
+    '안전', '만족', '섬세', '디테일', '깨끗', '최고', '상쾌', '포근', '신뢰',
+    '편리', '인증', '우수', '환상', '흥행', '공감', '훈훈', '오래', '인기', '철학',
+    '멋있', '아름', '성공', '굉장', '대박', '정밀', '뛰어나'
+] + additional_positive_words
+
+# 부정적인 단어 사전 (추가 단어 통합)
+# negative_words = [
+#     "안돼", "하지마", "혼나", "위험", "조절",  # 통제/억압
+#     "화", "짜증", "속상해", "억울해", "걱정",    # 감정적 압박
+#     "실수", "잘못", "너 때문에", "왜",          # 비판/책임 전가
+#     "바빠", "포기", "모르겠어", "답답", "외로워" # 무시/방치
+# ] + additional_negative_words
+
+negative_words=['짜증','화나','미워','속상해','슬퍼','힘들어','불안','찝찝하고','더럽고','서운해']+ additional_negative_words
+
+# 텍스트 전처리
+def preprocess_text(text):
+    text = re.sub('[^가-힣ㄱ-ㅎㅏ-ㅣa-zA-Z]', ' ', text)  # 특수문자 제거
+    text = re.sub(' +', ' ', text)  # 공백 정리
+    return text
+
+# 형태소 분석을 통한 단어 추출
+def extract_words(text):
+    okt = Okt()
+    words = okt.morphs(text)  # 형태소 분석
+    return [word for word in words if len(word) >= 1]  # 1글자 이상 단어 추출
+
+# 감성 단어 추출 함수
+def extract_sentiment_words(all_words, sentiment_dict):
+    return [word for word in all_words if word in sentiment_dict]  # 정확한 단어 매칭
+
+# 텍스트 전처리
+preprocessed_text = preprocess_text(text)
+
+# 모든 단어 추출
+all_words = extract_words(preprocessed_text)
+
+# 긍정/부정 단어 추출
+positive_extracted = extract_sentiment_words(all_words, positive_words)
+negative_extracted = extract_sentiment_words(all_words, negative_words)
+
+# 긍정/부정 단어 빈도수 계산
+positive_word_counts = Counter(positive_extracted)
+negative_word_counts = Counter(negative_extracted)
+
+# 워드클라우드 생성 함수
+def generate_wordcloud(word_counter, title, color_map):
+    font_path = 'c:\\windows\\fonts\\malgun.ttf'
+    wc = WordCloud(
+        font_path=font_path,
+        background_color='white',
+        max_words=100,
+        colormap=color_map,
+        width=800,
+        height=500
+    )
+    word_freq = dict(word_counter)
+    if not word_freq:
+        print(f'{title} 단어가 없습니다.')
+        return None
+    wc.generate_from_frequencies(word_freq)
+    return wc
+
+# 긍정 워드클라우드 생성 및 시각화
+positive_wc = generate_wordcloud(positive_word_counts, '긍정', 'Blues')
+if positive_wc:
+    plt.figure(figsize=(10, 5))
+    plt.imshow(positive_wc, interpolation='bilinear')
+    plt.axis('off')
+    plt.title('긍정 단어 워드클라우드')
+    plt.show()
+
+# 부정 워드클라우드 생성 및 시각화
+negative_wc = generate_wordcloud(negative_word_counts, '부정', 'Reds')
+if negative_wc:
+    plt.figure(figsize=(10, 5))
+    plt.imshow(negative_wc, interpolation='bilinear')
+    plt.axis('off')
+    plt.title('부정 단어 워드클라우드')
+    plt.show()
