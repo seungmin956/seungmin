@@ -35,7 +35,23 @@ positive_words = [
 #     "바빠", "포기", "모르겠어", "답답", "외로워" # 무시/방치
 # ] + additional_negative_words
 
-negative_words=['짜증','화나','미워','속상해','슬퍼','힘들어','불안','찝찝하고','더럽고','서운해']+ additional_negative_words
+negative_words = [
+'싫어',
+'무서워',
+'힘들어',
+'화',
+'불안해서',
+'시끄러워',
+'속상해',
+'스트레스',
+'포기',
+'너무해',
+'안 슬퍼',
+'무서운 거',
+'우울할 때',
+'섭섭할 때',
+'싸우고 싶을 때는'
+] + additional_negative_words
 
 # 텍스트 전처리
 def preprocess_text(text):
